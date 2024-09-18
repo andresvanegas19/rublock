@@ -1,6 +1,8 @@
 // single block in the blockchain
-use sha2::{Sha256, Digest};
+use crate::blockchain::penalty::Penalty;
+use crate::blockchain::transaction::Transaction;
 use log::debug;
+use sha2::{Digest, Sha256};
 
 pub struct Block {
     index: u64,
@@ -14,17 +16,14 @@ pub struct Block {
     // introduce an element of randomness that’s useful for certain protocols or security measures.
     // easier to switch between consensus mechanisms or implement hybrid models.
     pub nonce: u64,
+    pub penalties: Vec<Penalty>,
 }
 
 impl Block {
     pub fn calculate_hash(&self) -> Vec<u8> {
         let data = format!(
             "{}{}{:?}{:?}{}",
-            self.index,
-            self.timestamp,
-            self.transactions,
-            self.previous_hash,
-            self.nonce
+            self.index, self.timestamp, self.transactions, self.previous_hash, self.nonce
         );
 
         debug!("Data to hash: {}", data);
