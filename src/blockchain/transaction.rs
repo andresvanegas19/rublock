@@ -7,4 +7,3 @@ pub struct Transaction {
     pub receiver: String,
     pub amount: u64,
 }
-
