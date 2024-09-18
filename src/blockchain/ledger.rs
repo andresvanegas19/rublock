@@ -12,6 +12,8 @@ pub struct Ledger {
     // works as a blob
     pub current_transactions: Vec<Transaction>,
     pub validators: Vec<Validator>,
+    // Maps addresses to their last known nonce
+    pub nonces: HashMap<String, u64>,
 }
 
 impl Ledger {
@@ -112,7 +114,8 @@ impl Ledger {
         }
     }
 
-    /// Validates a given transaction by performing several checks to ensure its integrity and compliance with the blockchain protocol.
+    /// Validates a given transaction by performing several checks to ensure its
+    /// integrity and compliance with the blockchain protocol.
     ///
     /// # Parameters
     /// - `transaction`: A reference to the `Transaction` struct that represents the transaction to be validated.
@@ -121,6 +124,16 @@ impl Ledger {
     /// - `bool`: Returns `true` if the transaction is valid, otherwise returns `false`.
     pub fn validate_transaction(&self, transaction: &Transaction) -> bool {
         true
+    }
+
+    pub fn is_valid_nonce(self, transaction: &Transaction) -> bool {
+        let expected_nonce = self.nonces.get(&transaction.sender).unwrap_or(&0) + 1;
+        transaction.nonce == expected_nonce
+    }
+
+    pub fn update_nonce(self, transaction: &Transaction) {
+        self.nonces
+            .insert(transaction.sender.clone(), transaction.nonce);
     }
 
     pub fn validate_block(&self, block: &Block) -> bool {
@@ -207,5 +220,18 @@ impl Ledger {
 
     fn calculate_chain_weight(&self, chain: &Vec<Block>) -> u64 {
         chain.iter().map(|b| b.transactions.len()).sum()
+    }
+
+    // DOC: logic for transactions
+    pub fn add_transaction(&mut self, transaction: Transaction) -> Result<(), String> {
+        if !transaction.verify() {
+            return Err("Transaction signature is invalid".to_string());
+            debug!("Transaction signature is invalid");
+        }
+
+        if !self.is_valid_nonce(&transaction) {
+            return Err("Invalid transaction nonce".to_string());
+            debug!("Invalid transaction nonce");
+        }
     }
 }

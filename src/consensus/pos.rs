@@ -9,7 +9,6 @@ const DEFAULT_VALIDATOR: Validator = Validator {
     address: String::new(),
     stake: 0,
     reputation: 0,
-    secret_key: vec![],
     public_key: vec![],
 };
 

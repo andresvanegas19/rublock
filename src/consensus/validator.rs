@@ -19,7 +19,7 @@ pub struct Validator {
 }
 
 impl Validator {
-    pub fn new(address: String, stake: u64, reputation: i32) -> Self {
+    pub fn new(address: String, stake: u64, reputation: i32) -> (Self, Vec<u8>) {
         // Validators generate a key pair (secret and public key) when they set up their validator node.
         // The secret key is used to sign messages and the public key is used to verify the signature.
         let (secret_key, public_key) = Self::generate_key_pair();
@@ -28,18 +28,21 @@ impl Validator {
             address,
             stake,
             reputation,
+            public_key,
         }
+
+        // Return the validator instance and the secret key separately
+        (validator, secret_key)
     }
 
-    fn generate_key_pair() -> (Vec<u8>, Vec<u8>) {
+    fn generate_key_pair() -> (SecretKey, PublicKey) {
         //  generating random numbers
         let mut csprng = OsRng {};
 
         // used for generating and handling Ed25519 key pairs.
         let keypar: Keypair = Keypair::generate(&mut csprng);
-        let secret_key = keypar.secret.to_bytes().to_vec();
-        let public_key = keypar.public.to_bytes().to_vec();
 
-        (secret_key, public_key)
+        // TODO: Implement proper error handling and consider using crates like zeroize to clear secret keys from memory when they’re no longer needed.
+        (keypair.secret, keypair.public)
     }
 }
