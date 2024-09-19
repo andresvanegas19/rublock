@@ -1,7 +1,7 @@
 // Transactions need to be signed using the sender’s private key to ensure they are
 // authentic and haven’t been tampered with.
 
-use ed25519_dalek::{Keypair, PublicKey, SecretKey, Signer};
+use ed25519_dalek::{Keypair, PublicKey, SecretKey};
 use rand::rngs::OsRng;
 
 pub struct KeyPairRublock {

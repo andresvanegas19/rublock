@@ -1,13 +1,14 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, sync::Arc};
 
 use crate::blockchain::block::Block;
 use crate::blockchain::transaction::Transaction;
 use crate::consensus::challenge::Challenge;
-use crate::consensus::pos::select_highest_stake_validator;
+// use crate::consensus::pos::select_highest_stake_validator;
 use crate::consensus::validator::Validator;
 use crate::utils::time::current_timestamp;
 
-use ed25519_dalek::PublicKey;
+use ed25519_dalek::{PublicKey, SecretKey};
+use log::debug;
 
 // manage the chain of blocks, ensuring the order and integrity of transactions.
 // will be in charge on check transations, block and manage reputation of validators
@@ -60,21 +61,26 @@ impl Ledger {
     }
 
     pub fn create_block(&mut self, nonce: u64, previous_hash: Vec<u8>) -> &Block {
-        // let validator = select_highest_stake_validator(&self.validators, "")?;
+        // let validator: &Validator = match select_highest_stake_validator(&self.validators) {
+        //     Ok(v) => v,
+        //     Err(e) => {
+        //         debug!("Error selecting highest stake validator: {}", e);
+        //         return Err("No validators available".into());// or handle the error appropriately
+        //     }
+        // };
 
         // TODO: for now it will be not necessary but in the future we will need to implement a PoW
         let nonce = 0; // In PoS, nonce might not be necessary
 
-        let block = Block {
-            index: self.chain.len() as u64,
-            timestamp: current_timestamp(),
-            // ensures that any alteration in a previous block would invalidate all subsequent blocks
+        let block: Block = Block::new(
+            self.chain.len() as u64,
+            current_timestamp(),
             previous_hash,
-            hash: vec![],
             nonce,
-        };
+            Vec::new(), // penalties
+        );
 
-        block.set_transactions(Arc::new(self.current_transactions.clone()));
+        block.set_transactions(Arc::new(&self.current_transactions));
 
         // ensure data integrity
         let block_hash = block.calculate_hash();

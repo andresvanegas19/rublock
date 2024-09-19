@@ -1,6 +1,7 @@
 use crate::consensus::validator::Validator;
 
 use log::error;
+
 // use vrf::openssl::CipherSuite;
 // use vrf::openssl::ECVRF;
 
@@ -74,39 +75,26 @@ use log::error;
 //         .ok_or_else(|| "No valid validator found".into())
 // }
 
-pub fn select_highest_stake_validator<'a>(
-    validators: &'a [Validator], // Using a slice instead of Vec for better flexibility
-    // secret_key: &'a [u8],
-    // seed: &'a [u8],
-) -> Result<&'a Validator, Box<dyn std::error::Error>> {
-    // Return a reference to a single Validator
-    if validators.is_empty() {
-        // Handle the case when no validators are available
-        return Err("No validators available".into());
-    }
+// pub fn select_highest_stake_validator<'a>(
+//     validators: &'a [Validator],
+// ) -> Result<&'a Validator, String> {
+//     if validators.is_empty() {
+//         return Err("No validators available".to_string());
+//     }
 
-    // Calculate the total stake of all validators in one iteration
-    let total_stake: u64 = validators.iter().fold(0, |acc, v| acc + v.stake);
+//     let total_stake: u64 = validators.iter().map(|v| v.stake).sum();
 
-    // Handle the case where there is no stake by returning an error
-    if total_stake == 0 {
-        return Err("Total stake is zero".into());
-    }
+//     if total_stake == 0 {
+//         return Err("Total stake is zero".to_string());
+//     }
 
-    // Find the validator with the highest stake
-    let mut max_stake_validator = None;
-    let mut max_stake: u64 = 0;
+//     let max_stake_validator = validators
+//         .iter()
+//         .max_by_key(|v| v.stake)
+//         .ok_or_else(|| "No valid validator found".to_string())?;
 
-    for validator in validators.iter() {
-        if validator.stake > max_stake {
-            max_stake = validator.stake;
-            max_stake_validator = Some(validator);
-        }
-    }
-
-    // Return the validator with the highest stake
-    max_stake_validator.ok_or_else(|| "No valid validator found".into())
-}
+//     Ok(max_stake_validator)
+// }
 
 fn calculate_threshold(stake: u64, total_stake: u64) -> u64 {
     if total_stake == 0 {

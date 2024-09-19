@@ -10,38 +10,38 @@ use ed25519_dalek::{Keypair, PublicKey, SecretKey};
 use rand::rngs::OsRng;
 
 pub struct Validator {
-    // identifier derived from a public key,
-    pub adresses: String,
+    // Identifier derived from a public key
+    pub address: String,
     // TODO: Implement a system for new validators to join the network.
     pub stake: u64,
     pub reputation: i32,
-    // key personalizes the VRF
-    pub public_key: Vec<u8>,
+    // Key personalizes the VRF
+    pub public_key: PublicKey,
 }
 
 impl Validator {
-    pub fn new(address: String, stake: u64, reputation: i32) -> (Self, Vec<u8>) {
+    pub fn new(address: String, stake: u64, reputation: i32) -> (Self, SecretKey) {
         // Validators generate a key pair (secret and public key) when they set up their validator node.
         // The secret key is used to sign messages and the public key is used to verify the signature.
         let (secret_key, public_key) = Self::generate_key_pair();
 
-        Validator {
+        let validator = Validator {
             address,
             stake,
             reputation,
             public_key,
-        }
+        };
 
         // Return the validator instance and the secret key separately
         (validator, secret_key)
     }
 
     fn generate_key_pair() -> (SecretKey, PublicKey) {
-        //  generating random numbers
+        // Generating random numbers
         let mut csprng = OsRng {};
 
-        // used for generating and handling Ed25519 key pairs.
-        let keypar: Keypair = Keypair::generate(&mut csprng);
+        // Used for generating and handling Ed25519 key pairs.
+        let keypair: Keypair = Keypair::generate(&mut csprng);
 
         // TODO: Implement proper error handling and consider using crates like zeroize to clear secret keys from memory when they’re no longer needed.
         (keypair.secret, keypair.public)

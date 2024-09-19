@@ -6,11 +6,11 @@ use crate::blockchain::penalty::Penalty;
 use crate::blockchain::transaction::Transaction;
 
 pub struct Block {
-    index: u64,
+    pub index: u64,
     // TODO: if we need to do complex operation with timestamp, we can use chrono::DateTime
     pub timestamp: u64,
-    pub transactions: Arc<Vec<Transaction>>,
-    pub previous_hash: String,
+    transactions: Option<Arc<Vec<Transaction>>>, // Use Option to allow None
+    pub previous_hash: Vec<u8>,
     // Block's hash in Vectors of bytes to enhance the perf
     pub hash: Vec<u8>,
     // ensures that each block’s hash is unique, even if other contents are the same.
@@ -22,20 +22,19 @@ pub struct Block {
 
 impl Block {
     pub fn new(
+        index: u64,
         timestamp: u64,
-        transactions: Vec<Transaction>,
-        previous_hash: String,
+        previous_hash: Vec<u8>,
         nonce: u64,
         penalties: Vec<Penalty>,
     ) -> Self {
         let hash = vec![];
-        // TOOD: finding a way to calculate the number of the block
-        let index = 0;
 
+        // TOOD: finding a way to calculate the number of the block
         Block {
             index,
             timestamp,
-            transactions: Arc::new(transactions),
+            transactions: None,
             previous_hash,
             hash,
             nonce,
@@ -73,7 +72,7 @@ impl Block {
         self.transactions
             .iter()
             .map(|transaction| {
-                String::from_utf8(transaction.signature.clone()).expect("Invalid UTF-8 sequence")
+                String::from_utf8(*transaction.signature.clone()).expect("Invalid UTF-8 sequence")
             })
             .collect::<Vec<String>>()
             .join("")
