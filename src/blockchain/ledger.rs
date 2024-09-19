@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use crate::blockchain::block::Block;
 use crate::blockchain::transaction::Transaction;
 use crate::consensus::challenge::Challenge;
-use crate::consensus::pos::select_random_validator;
+use crate::consensus::pos::select_highest_stake_validator;
 use crate::consensus::validator::Validator;
 use crate::utils::time::current_timestamp;
 
@@ -60,7 +60,7 @@ impl Ledger {
     }
 
     pub fn create_block(&mut self, nonce: u64, previous_hash: Vec<u8>) -> &Block {
-        let validator = select_random_validator(&self.validators, "")?;
+        // let validator = select_highest_stake_validator(&self.validators, "")?;
 
         // TODO: for now it will be not necessary but in the future we will need to implement a PoW
         let nonce = 0; // In PoS, nonce might not be necessary

@@ -1,8 +1,8 @@
 use crate::consensus::validator::Validator;
 
 use log::error;
-use vrf::openssl::CipherSuite;
-use vrf::openssl::ECVRF;
+// use vrf::openssl::CipherSuite;
+// use vrf::openssl::ECVRF;
 
 // TODO: create the default validator
 // use lazy_static::lazy_static;
@@ -16,63 +16,96 @@ use vrf::openssl::ECVRF;
 //     };
 // }
 
-// select a validator in a way that is random yet verifiable and influenced by the validator’s stake
-// TODO: make a more robust randomest - Commit-Reveal Schemes - Hash-Based Randomness - Decentralized Randomness
-// Seed: Ensures that all validators are using the same base data for randomness generation.
-// TODO: Previous Block Hash - Epoch Number or Slot ID
-pub fn select_random_validator(
-    validators: &[Validator],
-    secret_key: &[u8],
-    seed: &[u8],
-) -> Result<Validator, Box<dyn std::error::Error>> {
+// // select a validator in a way that is random yet verifiable and influenced by the validator’s stake
+// // TODO: make a more robust randomest - Commit-Reveal Schemes - Hash-Based Randomness - Decentralized Randomness
+// // Seed: Ensures that all validators are using the same base data for randomness generation.
+// // TODO: Previous Block Hash - Epoch Number or Slot ID
+// pub fn select_random_validator(
+//     validators: &[Validator],
+//     secret_key: &[u8],
+//     seed: &[u8],
+// ) -> Result<Validator, Box<dyn std::error::Error>> {
+//     if validators.is_empty() {
+//         // Handle the creation of the genesis block explicitly
+//         return Err("No validators available".into());
+//     }
+
+//     // Calculate the total stake of all selected validators in a single iteration.
+//     let total_stake: u64 = validators.iter().fold(0, |acc, v| acc + v.stake);
+//     // Handle the case where there is no stake by returning the default validator
+//     if total_stake == 0 {
+//         return Err("Total stake is zero".into());
+//         // return Some(&*DEFAULT_VALIDATOR);
+//     }
+
+//     let mut outputs: Vec<(&Validator, &[u8])> = Vec::new();
+//     // TODO: Implement incentives for users to become validators by staking tokens.
+//     // TODO: Penalize validators who act maliciously or fail to validate correctly.
+//     for validator in validators {
+//         // include stake in the selection, adjust the VRF output based on the validator’s stake.
+//         // SECP256K1_SHA256_TAI Specifies the elliptic curve and hash function to be used.
+//         // TODO: Ensure that all validators are using the same cipher suite to avoid verification issues
+//         let vrf: ECVRF = match ECVRF::from_suite(CipherSuite::SECP256K1_SHA256_TAI) {
+//             Ok(vrf) => vrf,
+//             Err(e) => {
+//                 debug!("Error proving VRF with seed {:?}: {:?}", seed, e);
+//                 return Err("Error initializing VRF".into()); // Gracefully handle the error by returning an error
+//             }
+//         };
+//         let (hash, proof) = match vrf.prove(secret_key, seed) {
+//             Ok(result) => result,
+//             Err(e) => {
+//                 debug!("Error proving VRF: {:?}", e);
+//                 continue;
+//             }
+//         };
+//         let threshold = calculate_threshold(validator.stake, total_stake);
+
+//         // Convert the hash output to a numeric value for comparison.
+//         if hash_to_number(&hash) < threshold {
+//             outputs.push((validator, hash));
+//         }
+//     }
+//     outputs.sort_unstable_by(|a, b| a.1.cmp(&b.1)); // Sort by hash value
+//     outputs
+//         .first()
+//         .map(|(validator, _)| *validator)
+//         .map(|(validator, _)| validator.clone())
+//         .ok_or_else(|| "No valid validator found".into())
+// }
+
+pub fn select_highest_stake_validator<'a>(
+    validators: &'a [Validator], // Using a slice instead of Vec for better flexibility
+    // secret_key: &'a [u8],
+    // seed: &'a [u8],
+) -> Result<&'a Validator, Box<dyn std::error::Error>> {
+    // Return a reference to a single Validator
     if validators.is_empty() {
-        // Handle the creation of the genesis block explicitly
+        // Handle the case when no validators are available
         return Err("No validators available".into());
     }
 
-    // Calculate the total stake of all selected validators in a single iteration.
+    // Calculate the total stake of all validators in one iteration
     let total_stake: u64 = validators.iter().fold(0, |acc, v| acc + v.stake);
-    // Handle the case where there is no stake by returning the default validator
+
+    // Handle the case where there is no stake by returning an error
     if total_stake == 0 {
         return Err("Total stake is zero".into());
-        // return Some(&*DEFAULT_VALIDATOR);
     }
 
-    let mut outputs: Vec<(&Validator, &[u8])> = Vec::new();
-    // TODO: Implement incentives for users to become validators by staking tokens.
-    // TODO: Penalize validators who act maliciously or fail to validate correctly.
-    for validator in validators {
-        // include stake in the selection, adjust the VRF output based on the validator’s stake.
-        // SECP256K1_SHA256_TAI Specifies the elliptic curve and hash function to be used.
-        // TODO: Ensure that all validators are using the same cipher suite to avoid verification issues
-        let vrf: ECVRF = match ECVRF::from_suite(CipherSuite::SECP256K1_SHA256_TAI) {
-            Ok(vrf) => vrf,
-            Err(e) => {
-                debug!("Error proving VRF with seed {:?}: {:?}", seed, e);
-                return Err("Error initializing VRF".into()); // Gracefully handle the error by returning an error
-            }
-        };
-        let (hash, proof) = match vrf.prove(secret_key, seed) {
-            Ok(result) => result,
-            Err(e) => {
-                debug!("Error proving VRF: {:?}", e);
-                continue;
-            }
-        };
-        let threshold = calculate_threshold(validator.stake, total_stake);
+    // Find the validator with the highest stake
+    let mut max_stake_validator = None;
+    let mut max_stake: u64 = 0;
 
-        // Convert the hash output to a numeric value for comparison.
-        if hash_to_number(&hash) < threshold {
-            outputs.push((validator, hash));
+    for validator in validators.iter() {
+        if validator.stake > max_stake {
+            max_stake = validator.stake;
+            max_stake_validator = Some(validator);
         }
     }
 
-    outputs.sort_unstable_by(|a, b| a.1.cmp(&b.1)); // Sort by hash value
-    outputs
-        .first()
-        .map(|(validator, _)| validator.clone())
-        .map(|(validator, _)| validator.clone())
-        .ok_or_else(|| "No valid validator found".into())
+    // Return the validator with the highest stake
+    max_stake_validator.ok_or_else(|| "No valid validator found".into())
 }
 
 fn calculate_threshold(stake: u64, total_stake: u64) -> u64 {
