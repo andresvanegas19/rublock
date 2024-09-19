@@ -1,6 +1,14 @@
 Inspired by [Blockchain](https://github.com/ZuoFuhong/blockchain_rust)
 
+Own thoughts on TODO:
+- Validate transactions and adding a new block
+- Been able to generate the genesis block
+- Create a system of challenge
+- work on network and try to fit this project into a docker
+- implement account model and asmart contacts
+- implement adding the blacklist and penalty in onchain 
 
+TODO:
     1.	Transaction Handling:
         •	Create, sign, and verify transactions.
         •	Ensure transactions can be added to a pool and included in blocks.

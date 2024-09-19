@@ -1,3 +1,5 @@
+use crate::consensus::validator::Validator;
+
 enum SlashingReason {
     DoubleSigning,
     InvalidBlock,
@@ -40,17 +42,23 @@ impl Penalty {
     }
 
     // Return how much it will be the penalty in tokens
-    pub fn apply_penalties(&self, slashed_validator: &mut Validator, reporter_validator: &mut Validator) {
-        let amount_penalty: u64 = 0;
+    pub fn apply_penalties(
+        &self,
+        slashed_validator: &mut Validator,
+        reporter_validator: &mut Validator,
+    ) {
+        let mut amount_penalty: u64 = 0;
         match self.reason {
-            SlashingReason::InvalidBlock => amount_penalty = penalty_invalid_block(validator.stake),
-            SlashingReason::Inactivity => amount_penalty = penalty_inactivity(validator.reputation),
+            SlashingReason::InvalidBlock => {
+                amount_penalty = self.penalty_invalid_block(slashed_validator.stake)
+            }
+            SlashingReason::Inactivity => self.penalty_inactivity(&mut slashed_validator.reputation),
             SlashingReason::DoubleSigning => {
-                amount_penalty = penalty_double_signing(validator.stake)
+                amount_penalty = self.penalty_double_signing(slashed_validator.stake)
             }
         }
 
-        validator.stake -= amount_penalty;
+        slashed_validator.stake -= amount_penalty;
         // TODO: see if only the reported earns the reward or all the network or move to a poll to the developers
         reporter_validator.stake += amount_penalty;
     }
@@ -69,8 +77,7 @@ impl Penalty {
         validator_amount / 4
     }
 
-    fn penalty_inactivity(&self, validator_reputation: i32) -> i32 {
-        validator_reputation -= 1;
-        0
+    fn penalty_inactivity(&self, validator_reputation: &mut i32) {
+        *validator_reputation -= 1;
     }
 }

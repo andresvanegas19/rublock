@@ -1,33 +1,40 @@
 use crate::consensus::validator::Validator;
-use rand::rngs::OsRng;
-use vrf::openssl::CipherSuite;
-use vrf::VRF;
+use lazy_static::lazy_static;
 
+use log::error;
+use vrf::openssl::CipherSuite;
+use vrf::{ECVRF, VRF};
+
+// TODO: create the default validator
 // Placeholder for the default validator.
-// TODO: how to create this default validator
-const DEFAULT_VALIDATOR: Validator = Validator {
-    address: String::new(),
-    stake: 0,
-    reputation: 0,
-    public_key: vec![],
-};
+// lazy_static! {
+//     static ref DEFAULT_VALIDATOR: Validator = Validator {
+//         address: "default_address".to_string(),
+//         stake: 0,
+//         reputation: 0,
+//         public_key: vec![0; 33], // Assuming a 33-byte public key for example
+//     };
+// }
 
 // select a validator in a way that is random yet verifiable and influenced by the validator’s stake
 // TODO: make a more robust randomest - Commit-Reveal Schemes - Hash-Based Randomness - Decentralized Randomness
 // Seed: Ensures that all validators are using the same base data for randomness generation.
 // TODO: Previous Block Hash - Epoch Number or Slot ID
-pub fn select_validator(validators: &[Validator], seed: &[u8]) -> Option<&Validator> {
-    if validatos.is_empty() {
-        // Fallback to a default validator or handle genesis block creation
-        return Some(&DEFAULT_VALIDATOR);
+pub fn select_random_validator(
+    validators: &[Validator],
+    secret_key: &[u8],
+    seed: &[u8],
+) -> Option<&Validator> {
+    if validators.is_empty() {
+        // Handle the creation of the genesis block explicitly
+        return None;
     }
 
-    // Get the total of total_ stake in selected validators, because
-    // we dont have certainty that when generate the block how many validators we will have
-    let total_stake: u64 = validators.iter().map(|v| v.stake).sum();
-    // TODO: there is no stake, help with this case
+    // Calculate the total stake of all selected validators in a single iteration.
+    let total_stake: u64 = validators.iter().fold(0, |acc, v| acc + v.stake);
+    // Handle the case where there is no stake by returning the default validator
     if total_stake == 0 {
-        return None;
+        return Some(&*DEFAULT_VALIDATOR);
     }
 
     let mut outputs = Vec::new();
@@ -37,10 +44,20 @@ pub fn select_validator(validators: &[Validator], seed: &[u8]) -> Option<&Valida
         // include stake in the selection, adjust the VRF output based on the validator’s stake.
         // SECP256K1_SHA256_TAI Specifies the elliptic curve and hash function to be used.
         // TODO: Ensure that all validators are using the same cipher suite to avoid verification issues
-        let vrf = ECVRF::from_secret_key(&validator.secret_key, CipherSuite::SECP256K1_SHA256_TAI);
+        let vrf = match ECVRF::from_secret_key(secret_key, CipherSuite::SECP256K1_SHA256_TAI) {
+            Ok(vrf) => vrf,
+            Err(e) => {
+                error!("Error proving VRF with seed {:?}", seed);
+                debug!("Error proving VRF with seed {:?}: {:?}", seed, e);
+                return None; // Gracefully handle the error by returning None
+            }
+        };
         let (hash, proof) = match vrf.prove(seed) {
             Ok(result) => result,
-            Err(_) => continue,
+            Err(e) => {
+                debug!("Error proving VRF: {:?}", e);
+                continue;
+            }
         };
         let threshold = calculate_threshold(validator.stake, total_stake);
 
@@ -50,22 +67,35 @@ pub fn select_validator(validators: &[Validator], seed: &[u8]) -> Option<&Valida
         }
     }
 
-    outputs.sort_by(|a, b| a.1.cmp(&b.1)); // Sort by hash value
-    outputs.first().map(|(validator, _)| *validator)
+    outputs.sort_unstable_by(|a, b| a.1.cmp(&b.1)); // Sort by hash value
+    outputs
+        .first()
+        .map(|(validator, _)| *validator)
+        .or(Some(&*DEFAULT_VALIDATOR));
 }
 
 fn calculate_threshold(stake: u64, total_stake: u64) -> u64 {
-    let stake_ratio = stake as f64 / total_stake as f64;
-    let threshold = (u64::MAX as f64 * stake_ratio) as u64;
-
-    threshold
+    if total_stake == 0 {
+        return u64::MAX;
+    }
+    (stake as u128 * u64::MAX as u128 / total_stake as u128) as u64
 }
 
-// Placeholder for the hash_to_number function.
+// Convert the first 8 bytes of the hash to a u64 number.
+// This is done to reduce the hash to a manageable size for comparison purposes.
+// Using the first 8 bytes ensures that we get a consistent and reproducible numeric value.
 fn hash_to_number(hash: &[u8]) -> u64 {
     // Convert the first 8 bytes of the hash to a u64 number
     let mut array = [0u8; 8];
     let bytes = &hash[..8];
-    array.copy_from_slice(bytes);
+    match bytes.try_into() {
+        Ok(b) => array = b,
+        Err(_) => {
+            error!("slice with incorrect length");
+            return 0; // or handle the error as needed
+        }
+    }
+    array = bytes.try_into().expect("slice with incorrect length");
+
     u64::from_be_bytes(array)
 }

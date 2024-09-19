@@ -10,6 +10,7 @@ use ed25519_dalek::{Keypair, PublicKey, SecretKey};
 use rand::rngs::OsRng;
 
 pub struct Validator {
+    // identifier derived from a public key,
     pub adresses: String,
     // TODO: Implement a system for new validators to join the network.
     pub stake: u64,
