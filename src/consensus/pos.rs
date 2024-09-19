@@ -1,11 +1,11 @@
 use crate::consensus::validator::Validator;
-use lazy_static::lazy_static;
 
 use log::error;
 use vrf::openssl::CipherSuite;
-use vrf::{ECVRF, VRF};
+use vrf::openssl::ECVRF;
 
 // TODO: create the default validator
+// use lazy_static::lazy_static;
 // Placeholder for the default validator.
 // lazy_static! {
 //     static ref DEFAULT_VALIDATOR: Validator = Validator {
@@ -24,35 +24,35 @@ pub fn select_random_validator(
     validators: &[Validator],
     secret_key: &[u8],
     seed: &[u8],
-) -> Option<&Validator> {
+) -> Result<Validator, Box<dyn std::error::Error>> {
     if validators.is_empty() {
         // Handle the creation of the genesis block explicitly
-        return None;
+        return Err("No validators available".into());
     }
 
     // Calculate the total stake of all selected validators in a single iteration.
     let total_stake: u64 = validators.iter().fold(0, |acc, v| acc + v.stake);
     // Handle the case where there is no stake by returning the default validator
     if total_stake == 0 {
-        return Some(&*DEFAULT_VALIDATOR);
+        return Err("Total stake is zero".into());
+        // return Some(&*DEFAULT_VALIDATOR);
     }
 
-    let mut outputs = Vec::new();
+    let mut outputs: Vec<(&Validator, &[u8])> = Vec::new();
     // TODO: Implement incentives for users to become validators by staking tokens.
     // TODO: Penalize validators who act maliciously or fail to validate correctly.
     for validator in validators {
         // include stake in the selection, adjust the VRF output based on the validator’s stake.
         // SECP256K1_SHA256_TAI Specifies the elliptic curve and hash function to be used.
         // TODO: Ensure that all validators are using the same cipher suite to avoid verification issues
-        let vrf = match ECVRF::from_secret_key(secret_key, CipherSuite::SECP256K1_SHA256_TAI) {
+        let vrf: ECVRF = match ECVRF::from_suite(CipherSuite::SECP256K1_SHA256_TAI) {
             Ok(vrf) => vrf,
             Err(e) => {
-                error!("Error proving VRF with seed {:?}", seed);
                 debug!("Error proving VRF with seed {:?}: {:?}", seed, e);
-                return None; // Gracefully handle the error by returning None
+                return Err("Error initializing VRF".into()); // Gracefully handle the error by returning an error
             }
         };
-        let (hash, proof) = match vrf.prove(seed) {
+        let (hash, proof) = match vrf.prove(secret_key, seed) {
             Ok(result) => result,
             Err(e) => {
                 debug!("Error proving VRF: {:?}", e);
@@ -70,8 +70,9 @@ pub fn select_random_validator(
     outputs.sort_unstable_by(|a, b| a.1.cmp(&b.1)); // Sort by hash value
     outputs
         .first()
-        .map(|(validator, _)| *validator)
-        .or(Some(&*DEFAULT_VALIDATOR));
+        .map(|(validator, _)| validator.clone())
+        .map(|(validator, _)| validator.clone())
+        .ok_or_else(|| "No valid validator found".into())
 }
 
 fn calculate_threshold(stake: u64, total_stake: u64) -> u64 {
