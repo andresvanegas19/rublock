@@ -1,6 +1,6 @@
-use crate::consensus::validator::Validator;
+// use crate::consensus::validator::Validator;
 
-use log::error;
+// use log::error;
 
 // use vrf::openssl::CipherSuite;
 // use vrf::openssl::ECVRF;
@@ -96,28 +96,28 @@ use log::error;
 //     Ok(max_stake_validator)
 // }
 
-fn calculate_threshold(stake: u64, total_stake: u64) -> u64 {
-    if total_stake == 0 {
-        return u64::MAX;
-    }
-    (stake as u128 * u64::MAX as u128 / total_stake as u128) as u64
-}
+// fn calculate_threshold(stake: u64, total_stake: u64) -> u64 {
+//     if total_stake == 0 {
+//         return u64::MAX;
+//     }
+//     (stake as u128 * u64::MAX as u128 / total_stake as u128) as u64
+// }
 
 // Convert the first 8 bytes of the hash to a u64 number.
 // This is done to reduce the hash to a manageable size for comparison purposes.
 // Using the first 8 bytes ensures that we get a consistent and reproducible numeric value.
-fn hash_to_number(hash: &[u8]) -> u64 {
-    // Convert the first 8 bytes of the hash to a u64 number
-    let mut array = [0u8; 8];
-    let bytes = &hash[..8];
-    match bytes.try_into() {
-        Ok(b) => array = b,
-        Err(_) => {
-            error!("slice with incorrect length");
-            return 0; // or handle the error as needed
-        }
-    }
-    array = bytes.try_into().expect("slice with incorrect length");
+// fn hash_to_number(hash: &[u8]) -> u64 {
+//     // Convert the first 8 bytes of the hash to a u64 number
+//     let mut array = [0u8; 8];
+//     let bytes = &hash[..8];
+//     match bytes.try_into() {
+//         Ok(b) => array = b,
+//         Err(_) => {
+//             error!("slice with incorrect length");
+//             return 0; // or handle the error as needed
+//         }
+//     }
+//     array = bytes.try_into().expect("slice with incorrect length");
 
-    u64::from_be_bytes(array)
-}
+//     u64::from_be_bytes(array)
+// }

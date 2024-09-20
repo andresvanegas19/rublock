@@ -9,7 +9,7 @@ pub struct Block {
     pub index: u64,
     // TODO: if we need to do complex operation with timestamp, we can use chrono::DateTime
     pub timestamp: u64,
-    transactions: Option<Arc<Vec<Transaction>>>, // Use Option to allow None
+    transactions: Arc<Vec<Transaction>>, // Use Option to allow None
     pub previous_hash: Vec<u8>,
     // Block's hash in Vectors of bytes to enhance the perf
     pub hash: Vec<u8>,
@@ -24,6 +24,7 @@ impl Block {
     pub fn new(
         index: u64,
         timestamp: u64,
+        transactions: Arc<Vec<Transaction>>,
         previous_hash: Vec<u8>,
         nonce: u64,
         penalties: Vec<Penalty>,
@@ -34,7 +35,7 @@ impl Block {
         Block {
             index,
             timestamp,
-            transactions: None,
+            transactions,
             previous_hash,
             hash,
             nonce,
@@ -42,7 +43,7 @@ impl Block {
         }
     }
 
-    pub fn calculate_hash(&self) -> Vec<u8> {
+    pub fn calculate_hash(&mut self) {
         let data = format!(
             "{}{}{:?}{:?}{}",
             self.index,
@@ -64,7 +65,7 @@ impl Block {
         let result = hasher.finalize();
         debug!("Hash result: {:?}", result);
 
-        result.to_vec()
+        self.hash = result.to_vec();
     }
 
     // get in string all the signature of the transactions
@@ -72,7 +73,7 @@ impl Block {
         self.transactions
             .iter()
             .map(|transaction| {
-                String::from_utf8(*transaction.signature.clone()).expect("Invalid UTF-8 sequence")
+                String::from_utf8(transaction.signature.clone()).expect("Invalid UTF-8 sequence")
             })
             .collect::<Vec<String>>()
             .join("")
@@ -80,9 +81,5 @@ impl Block {
 
     pub fn get_transactions(&self) -> &[Transaction] {
         &self.transactions
-    }
-
-    pub fn set_transactions(&mut self, transactions: Arc<Vec<Transaction>>) {
-        self.transactions = transactions;
     }
 }

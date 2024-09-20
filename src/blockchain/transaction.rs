@@ -1,7 +1,11 @@
 // struct that represents a transfer of value or data between participants in the network
-use crate::crypto::keypair::KeyPairRublock;
+// use crate::crypto::keypair::KeyPairRublock;
 
-use super::ledger::Ledger;
+// use super::ledger::Ledger;
+
+use curve25519_dalek::{RistrettoPoint, Scalar};
+
+use crate::crypto::keypair::KeyPairRublock;
 
 pub struct Transaction {
     pub sender: String,
@@ -20,8 +24,9 @@ impl Transaction {
         receiver: String,
         amount: u64,
         nonce: u64,
-        keypair: &KeyPairRublock,
         fee: u64,
+        public_key: RistrettoPoint,
+        secret_key: Scalar,
     ) -> Self {
         let mut tx = Transaction {
             sender,
@@ -33,7 +38,14 @@ impl Transaction {
         };
 
         let tx_data = self.serialize_for_signing();
-        tx.signature = keypair.sign(tx_data.as_bytes());
+        let (ristretto_point, _) = KeyPairRublock::sign(tx_data.as_bytes(), secret_key);
+
+        tx.signature = [
+            tx_data.as_bytes(),                             // message: &[u8],
+            public_key.compress().to_bytes().as_ref(),      // public_key: RistrettoPoint,
+            ristretto_point.compress().to_bytes().as_ref(), // r_point: RistrettoPoint,
+        ]
+        .concat();
 
         tx
     }
@@ -41,17 +53,8 @@ impl Transaction {
     // signed with the sender’s private key - verified using the sender’s public key.
     fn serialize_for_signing(&self) -> String {
         format!(
-            "{}{}{}{}",
-            self.sender, self.receiver, self.amount, self.nonce
+            "{}{}{}{}{}",
+            self.sender, self.receiver, self.fee, self.amount, self.nonce
         )
-    }
-
-    pub fn verify(&self, ledger: &Ledger) -> bool {
-        // Retrieve the senders pub key
-        let public_key = ledger.get_public_key_from_address(&self.sender)?;
-        // Serialize transaction data
-        let tx_data = self.serialize_for_signing();
-
-        public_key.verify(&tx_data, &self.signature).is_ok()
     }
 }
