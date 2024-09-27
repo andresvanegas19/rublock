@@ -1,12 +1,12 @@
 // test porpouse
 use curve25519_dalek::Scalar;
 use hex;
+use log::debug;
 use sha2::{Digest, Sha256};
 
 use rublock::{
-    blockchain::ledger::{self, Ledger},
-    consensus::validator::Validator,
-    crypto::keypair::KeyPairRublock,
+    blockchain::ledger::Ledger, blockchain::transaction::Transaction,
+    consensus::validator::Validator, crypto::keypair::KeyPairRublock,
 };
 
 fn main() {
@@ -16,39 +16,34 @@ fn main() {
     let mut ledger = Ledger::new();
 
     // generate key paris for the validators
-    let (validator_bob_secret_key, bob_validator) = Validator::new(100, 0);
-    let (validator_lana_secret_key, lana_validator) = Validator::new(300, 0);
+    let (_, bob_validator) = Validator::new(100, 0);
+    let (_, lana_validator) = Validator::new(300, 0);
 
     ledger.add_validator(bob_validator);
     ledger.add_validator(lana_validator);
 
     // Generate the keys for the users wallet, this SHOULDNT be done here but is just testing porpouse
-    let (bob_keypair, _) = KeyPairRublock::generate_keypair();
+    let (bob_keypair, src_key) = KeyPairRublock::generate_keypair();
+    // wallet naming
     let bob_key = derive_address(&bob_keypair);
     let (lana_keypair, _) = KeyPairRublock::generate_keypair();
+    // wallet naming
     let lana_key = derive_address(&lana_keypair);
 
-    // // Reigster public key in ledger
-    // ledger
-    //     .address_to_public_key
-    //     .insert(bob_keypair.clone(), bob_keypair.public_key.clone());
-    // ledger
-    //     .address_to_public_key
-    //     .insert(lana_keypair.clone(), lana_keypair.public_key.clone());
+    debug!("naming: {}", bob_key);
 
-    // let transaction = Transaction::new(
-    //     bob_keypair.clone(),
-    //     lana_keypair.clone(),
-    //     100, // amount
-    //     1,   // nonce
-    //     &bob_keypair,
-    // );
+    // TODO: switch the naming, wrong naming
+    let transaction = Transaction::new(
+        bob_key,     // sender's public key
+        lana_key,    // receiver's public key
+        100,         // amount
+        1,           // nonce
+        src_key,     // sender's secret key
+        bob_keypair, // sender's public key
+    );
 
-    // ledger
-    //     .add_transaction(transaction)
-    //     .expected("Failed to add transaction");
-
-    // ledger.create_block();
+    ledger.add_transaction(transaction);
+    ledger.create_block();
 
     // println!("Ledger: {:?}", ledger);
 }

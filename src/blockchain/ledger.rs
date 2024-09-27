@@ -40,7 +40,6 @@ impl Ledger {
 
         ledger
     }
-
     // TODO: needs to finished
     // fn create_genesis_block(&mut self) {
     //     let genesis_block = Block {
@@ -67,7 +66,7 @@ impl Ledger {
         self.current_transactions.push(transaction)
     }
 
-    pub fn create_block(&mut self, previous_hash: Vec<u8>) -> &Block {
+    pub fn create_block(&mut self) -> &Block {
         // let validator: &Validator = match select_highest_stake_validator(&self.validators) {
         //     Ok(v) => v,
         //     Err(e) => {
@@ -84,7 +83,7 @@ impl Ledger {
             self.chain.len() as u64,
             current_timestamp(),
             transactions_arc,
-            previous_hash,
+            vec![], // previous_hash
             nonce,
             Vec::new(), // penalties
         );
@@ -93,6 +92,8 @@ impl Ledger {
         block.calculate_hash();
         self.current_transactions.clear();
         self.chain.push(block);
+
+        debug!("Chain created");
 
         // Return the latest block
         self.chain.last().unwrap()
