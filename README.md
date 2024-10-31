@@ -1,5 +1,5 @@
 Here should be more doc... :/
-
+:::mermaid
 flowchart TD
     A[Christmas] -->|Get money| B(Go shopping)
     B --> C{Let me think}
@@ -7,3 +7,4 @@ flowchart TD
     C -->|Two| E[iPhone]
     C -->|Three| F[fa:fa-car Car]
   
+:::
